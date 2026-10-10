@@ -150,7 +150,7 @@ export function App() {
   };
 
   return (
-    <div className="flex flex-col min-h-screen bg-brew-950 text-slate-100">
+    <div className="flex flex-col min-h-screen w-full overflow-x-hidden bg-brew-950 text-slate-100">
       {/* Top Navbar */}
       <Navbar
         lang={lang}
@@ -161,15 +161,15 @@ export function App() {
       />
 
       {/* Main Container */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-6 sm:space-y-8">
+      <main className="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 lg:px-8 py-5 sm:py-8 space-y-5 sm:space-y-8">
         {/* Recipe Header Card */}
-        <div className="bg-brew-900/80 border border-slate-800 rounded-3xl p-5 sm:p-7 shadow-2xl relative overflow-hidden">
+        <div className="bg-brew-900/80 border border-slate-800 rounded-3xl p-4 sm:p-7 shadow-2xl relative overflow-hidden">
           {/* Ambient glow */}
           <div className="absolute top-0 right-0 w-80 h-80 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
 
-          <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+          <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-5 sm:gap-6">
             {/* Title & Notes input */}
-            <div className="space-y-2 flex-1">
+            <div className="space-y-2 flex-1 min-w-0">
               <div className="flex items-center gap-2">
                 <span className="text-xs uppercase font-bold tracking-wider px-2.5 py-0.5 rounded-full bg-amber-500/15 text-amber-300 border border-amber-500/30">
                   {recipe.styleId}
@@ -183,7 +183,7 @@ export function App() {
                 type="text"
                 value={recipe.name}
                 onChange={(e) => setRecipe({ ...recipe, name: e.target.value })}
-                className="w-full text-2xl sm:text-3xl lg:text-4xl font-black bg-transparent border-b border-transparent hover:border-slate-700 focus:border-amber-500 text-white focus:outline-none transition py-1"
+                className="w-full text-xl sm:text-3xl lg:text-4xl font-black bg-transparent border-b border-transparent hover:border-slate-700 focus:border-amber-500 text-white focus:outline-none transition py-1"
                 placeholder={lang === 'sv' ? 'Namnge ert öl...' : 'Name your beer...'}
               />
 
@@ -197,18 +197,18 @@ export function App() {
             </div>
 
             {/* Quick Batch Controls: Batch Size, Efficiency, Mash Temp */}
-            <div className="flex flex-wrap items-center gap-3 bg-brew-950/80 border border-slate-800/80 rounded-2xl p-3.5 sm:p-4">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-3 bg-brew-950/80 border border-slate-800/80 rounded-2xl p-3 sm:p-4 w-full lg:w-auto">
               {/* Batch Size Pills */}
-              <div>
+              <div className="w-full sm:w-auto">
                 <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider block mb-1">
                   {t.batchSize}
                 </span>
-                <div className="flex items-center gap-1">
+                <div className="flex items-center gap-1 overflow-x-auto pb-0.5 sm:pb-0">
                   {[10, 20, 25, 30, 50].map((size) => (
                     <button
                       key={size}
                       onClick={() => handleBatchSizeChange(size)}
-                      className={`px-2.5 py-1 rounded-lg text-xs font-bold transition ${
+                      className={`flex-1 sm:flex-none px-2.5 py-1 rounded-lg text-xs font-bold transition text-center ${
                         recipe.batchSizeL === size
                           ? 'bg-amber-500 text-stone-950 shadow-sm'
                           : 'bg-slate-900 border border-slate-800 text-slate-300 hover:text-white'
@@ -220,45 +220,48 @@ export function App() {
                 </div>
               </div>
 
-              {/* Mash Temp */}
-              <div className="border-l border-slate-800 pl-3">
-                <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider block mb-1">
-                  {t.mashTemp}
-                </span>
-                <div className="flex items-center gap-1.5">
-                  <input
-                    type="number"
-                    min="62"
-                    max="72"
-                    step="0.5"
-                    value={recipe.mashTempC}
-                    onChange={(e) =>
-                      setRecipe({ ...recipe, mashTempC: parseFloat(e.target.value) || 66 })
-                    }
-                    className="w-16 bg-slate-900 border border-slate-800 rounded-lg px-2 py-1 text-center font-mono text-xs font-bold text-white focus:outline-none"
-                  />
-                  <span className="text-xs text-slate-400">°C</span>
+              {/* Mash Temp & Efficiency */}
+              <div className="flex items-center gap-3 w-full sm:w-auto sm:border-l sm:border-slate-800 sm:pl-3 pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-800/80">
+                {/* Mash Temp */}
+                <div className="flex-1 sm:flex-initial">
+                  <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider block mb-1">
+                    {t.mashTemp}
+                  </span>
+                  <div className="flex items-center gap-1.5">
+                    <input
+                      type="number"
+                      min="62"
+                      max="72"
+                      step="0.5"
+                      value={recipe.mashTempC}
+                      onChange={(e) =>
+                        setRecipe({ ...recipe, mashTempC: parseFloat(e.target.value) || 66 })
+                      }
+                      className="w-full sm:w-16 bg-slate-900 border border-slate-800 rounded-lg px-2 py-1 text-center font-mono text-xs font-bold text-white focus:outline-none"
+                    />
+                    <span className="text-xs text-slate-400">°C</span>
+                  </div>
                 </div>
-              </div>
 
-              {/* Efficiency */}
-              <div className="border-l border-slate-800 pl-3">
-                <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider block mb-1">
-                  {t.efficiency}
-                </span>
-                <div className="flex items-center gap-1.5">
-                  <input
-                    type="number"
-                    min="60"
-                    max="90"
-                    step="1"
-                    value={recipe.efficiencyPercent}
-                    onChange={(e) =>
-                      setRecipe({ ...recipe, efficiencyPercent: parseInt(e.target.value, 10) || 75 })
-                    }
-                    className="w-14 bg-slate-900 border border-slate-800 rounded-lg px-2 py-1 text-center font-mono text-xs font-bold text-white focus:outline-none"
-                  />
-                  <span className="text-xs text-slate-400">%</span>
+                {/* Efficiency */}
+                <div className="flex-1 sm:flex-initial border-l border-slate-800 pl-3">
+                  <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider block mb-1">
+                    {t.efficiency}
+                  </span>
+                  <div className="flex items-center gap-1.5">
+                    <input
+                      type="number"
+                      min="60"
+                      max="90"
+                      step="1"
+                      value={recipe.efficiencyPercent}
+                      onChange={(e) =>
+                        setRecipe({ ...recipe, efficiencyPercent: parseInt(e.target.value, 10) || 75 })
+                      }
+                      className="w-full sm:w-14 bg-slate-900 border border-slate-800 rounded-lg px-2 py-1 text-center font-mono text-xs font-bold text-white focus:outline-none"
+                    />
+                    <span className="text-xs text-slate-400">%</span>
+                  </div>
                 </div>
               </div>
             </div>
