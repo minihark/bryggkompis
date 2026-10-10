@@ -10,6 +10,7 @@ import {
   Check,
   Beer,
   Sparkles,
+  Users,
 } from 'lucide-react';
 import { playCanPop, playCheersClink, playClick } from '../utils/audio';
 import confetti from 'canvas-confetti';
@@ -21,6 +22,11 @@ interface NavbarProps {
   onOpenShoppingList: () => void;
   onOpenBrewDay: () => void;
   onExport: () => void;
+  onOpenCoop?: () => void;
+  onCheers?: () => void;
+  peersCount?: number;
+  currentRoom?: string;
+  isConnected?: boolean;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -29,20 +35,29 @@ export const Navbar: React.FC<NavbarProps> = ({
   onOpenShoppingList,
   onOpenBrewDay,
   onExport,
+  onOpenCoop,
+  onCheers,
+  peersCount = 1,
+  currentRoom = 'BROR',
+  isConnected = false,
 }) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const t = getTranslation(lang);
 
   const handleSkal = () => {
-    playCanPop();
-    playCheersClink();
-    try {
-      confetti({
-        particleCount: 50,
-        spread: 70,
-        origin: { y: 0.6 },
-      });
-    } catch (e) {}
+    if (onCheers) {
+      onCheers();
+    } else {
+      playCanPop();
+      playCheersClink();
+      try {
+        confetti({
+          particleCount: 50,
+          spread: 70,
+          origin: { y: 0.6 },
+        });
+      } catch (e) {}
+    }
   };
 
   return (
@@ -72,6 +87,24 @@ export const Navbar: React.FC<NavbarProps> = ({
 
         {/* Desktop Controls (hidden on mobile, visible on sm/md+) */}
         <div className="hidden sm:flex items-center gap-2 sm:gap-2.5">
+          {/* Co-op Room & Presence Button */}
+          {onOpenCoop && (
+            <button
+              onClick={() => {
+                playClick();
+                onOpenCoop();
+              }}
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border border-slate-800 bg-brew-900/70 hover:bg-brew-850 hover:border-emerald-500/50 text-slate-200 text-xs font-semibold transition cursor-pointer"
+              title={lang === 'sv' ? `Co-op rum: ${currentRoom}` : `Co-op room: ${currentRoom}`}
+            >
+              <span className={`w-2 h-2 rounded-full ${isConnected ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'}`} />
+              <span className="hidden md:inline font-mono font-bold text-amber-300">{currentRoom}</span>
+              <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-emerald-500/20 text-emerald-300 font-bold">
+                {peersCount > 1 ? `${peersCount} 🟢` : 'Co-op'}
+              </span>
+            </button>
+          )}
+
           {/* Fun "Skål!" Cheers Button */}
           <button
             onClick={handleSkal}
@@ -145,6 +178,21 @@ export const Navbar: React.FC<NavbarProps> = ({
             <span>Skål!</span>
           </button>
 
+          {/* Quick Co-op on mobile */}
+          {onOpenCoop && (
+            <button
+              onClick={() => {
+                playClick();
+                onOpenCoop();
+              }}
+              className="p-2 rounded-xl border border-slate-800 bg-brew-900 text-emerald-400 active:scale-95 transition relative"
+              title="Co-op"
+            >
+              <span className={`w-2 h-2 rounded-full ${isConnected ? 'bg-emerald-400' : 'bg-amber-400'} absolute top-1 right-1`} />
+              <Users className="w-4 h-4" />
+            </button>
+          )}
+
           {/* Quick Inköpslista Icon */}
           <button
             onClick={() => {
@@ -187,6 +235,24 @@ export const Navbar: React.FC<NavbarProps> = ({
       {mobileMenuOpen && (
         <div className="sm:hidden border-t border-slate-800/80 bg-brew-950/95 p-4 space-y-3 animate-in fade-in slide-in-from-top-2 duration-200">
           <div className="grid grid-cols-2 gap-2">
+            {onOpenCoop && (
+              <button
+                onClick={() => {
+                  playClick();
+                  setMobileMenuOpen(false);
+                  onOpenCoop();
+                }}
+                className="col-span-2 p-3 rounded-xl bg-brew-900 border border-emerald-500/30 text-left flex items-center justify-between text-xs font-semibold text-emerald-300 active:bg-brew-850"
+              >
+                <div className="flex items-center gap-2.5">
+                  <span className={`w-2.5 h-2.5 rounded-full ${isConnected ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'}`} />
+                  <span>{lang === 'sv' ? `Co-op Rum: ${currentRoom}` : `Co-op Room: ${currentRoom}`}</span>
+                </div>
+                <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 font-mono font-bold">
+                  {peersCount > 1 ? `${peersCount} online` : '1'}
+                </span>
+              </button>
+            )}
             <button
               onClick={() => {
                 playClick();

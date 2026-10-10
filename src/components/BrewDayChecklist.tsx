@@ -5,21 +5,28 @@ import { playClick, playCanPop, playCheersClink } from '../utils/audio';
 import confetti from 'canvas-confetti';
 
 interface BrewDayChecklistProps {
-  isOpen: boolean;
-  onClose: () => void;
+  isOpen?: boolean;
+  onClose?: () => void;
   recipe: Recipe;
   metrics: BrewCalculations;
   lang: Language;
+  embedded?: boolean;
+  externalCompletedSteps?: Record<string, boolean>;
+  onStepToggle?: (stepId: string, completed: boolean) => void;
 }
 
 export const BrewDayChecklist: React.FC<BrewDayChecklistProps> = ({
-  isOpen,
+  isOpen = false,
   onClose,
   recipe,
   metrics,
   lang,
+  embedded = false,
+  externalCompletedSteps,
+  onStepToggle,
 }) => {
-  const [completedSteps, setCompletedSteps] = useState<Record<string, boolean>>({});
+  const [internalCompletedSteps, setInternalCompletedSteps] = useState<Record<string, boolean>>({});
+  const completedSteps = externalCompletedSteps ?? internalCompletedSteps;
 
   // Boil timer state (in seconds)
   const [timerSeconds, setTimerSeconds] = useState(recipe.boilTimeMin * 60);
@@ -45,12 +52,16 @@ export const BrewDayChecklist: React.FC<BrewDayChecklistProps> = ({
     return () => clearInterval(interval);
   }, [isTimerRunning, timerSeconds]);
 
-  if (!isOpen) return null;
+  if (!isOpen && !embedded) return null;
 
   const toggleStep = (id: string) => {
     playClick();
     const willComplete = !completedSteps[id];
-    setCompletedSteps((prev) => ({ ...prev, [id]: willComplete }));
+    if (onStepToggle) {
+      onStepToggle(id, willComplete);
+    } else {
+      setInternalCompletedSteps((prev) => ({ ...prev, [id]: willComplete }));
+    }
     if (willComplete && Object.keys(completedSteps).length >= 9) {
       playCheersClink();
     }
@@ -145,25 +156,25 @@ export const BrewDayChecklist: React.FC<BrewDayChecklistProps> = ({
     return `${m}:${s < 10 ? '0' : ''}${s}`;
   };
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
-      <div className="bg-brew-900 border border-slate-700 rounded-3xl w-full max-w-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
-        {/* Header */}
-        <div className="px-6 py-5 border-b border-slate-800 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-orange-500/20 text-orange-400 flex items-center justify-center font-bold">
-              <Flame className="w-5 h-5" />
-            </div>
-            <div>
-              <h2 className="text-lg font-bold text-white flex items-center gap-2">
-                {lang === 'sv' ? 'Bryggdagsprotokoll' : 'Brew Day Protocol'}
-              </h2>
-              <p className="text-xs text-slate-400">
-                {lang === 'sv' ? `Steg-för-steg checklista för ${recipe.name}` : `Step-by-step for ${recipe.name}`}
-              </p>
-            </div>
+  const contentMarkup = (
+    <div className={`bg-brew-900 border border-slate-700/80 rounded-3xl w-full ${embedded ? 'shadow-xl' : 'max-w-2xl shadow-2xl max-h-[90vh] flex flex-col'} overflow-hidden`}>
+      {/* Header */}
+      <div className="px-6 py-5 border-b border-slate-800 flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-2xl bg-orange-500/20 text-orange-400 flex items-center justify-center font-bold">
+            <Flame className="w-5 h-5" />
           </div>
+          <div>
+            <h2 className="text-lg font-bold text-white flex items-center gap-2">
+              {lang === 'sv' ? 'Bryggdagsprotokoll' : 'Brew Day Protocol'}
+            </h2>
+            <p className="text-xs text-slate-400">
+              {lang === 'sv' ? `Steg-för-steg checklista för ${recipe.name}` : `Step-by-step for ${recipe.name}`}
+            </p>
+          </div>
+        </div>
 
+        {!embedded && onClose && (
           <button
             onClick={() => {
               playClick();
@@ -173,7 +184,8 @@ export const BrewDayChecklist: React.FC<BrewDayChecklistProps> = ({
           >
             <X className="w-5 h-5" />
           </button>
-        </div>
+        )}
+      </div>
 
         {/* Content */}
         <div className="p-6 overflow-y-auto space-y-6">
@@ -268,17 +280,28 @@ export const BrewDayChecklist: React.FC<BrewDayChecklistProps> = ({
             {lang === 'sv' ? 'steg avklarade' : 'steps complete'}
           </span>
 
-          <button
-            onClick={() => {
-              playCheersClink();
-              onClose();
-            }}
-            className="px-5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-stone-950 font-bold text-xs shadow-md transition cursor-pointer"
-          >
-            {lang === 'sv' ? 'Klar för idag!' : 'Close Checklist'}
-          </button>
+          {onClose && (
+            <button
+              onClick={() => {
+                playCheersClink();
+                onClose();
+              }}
+              className="px-5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-stone-950 font-bold text-xs shadow-md transition cursor-pointer"
+            >
+              {lang === 'sv' ? 'Klar för idag!' : 'Close Checklist'}
+            </button>
+          )}
         </div>
       </div>
+    );
+
+  if (embedded) {
+    return contentMarkup;
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
+      {contentMarkup}
     </div>
   );
 };

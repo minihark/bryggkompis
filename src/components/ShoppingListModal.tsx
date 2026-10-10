@@ -5,23 +5,25 @@ import { X, ExternalLink, ShoppingBag, Copy, Check, DollarSign } from 'lucide-re
 import { playClick, playCanPop } from '../utils/audio';
 
 interface ShoppingListModalProps {
-  isOpen: boolean;
-  onClose: () => void;
+  isOpen?: boolean;
+  onClose?: () => void;
   recipe: Recipe;
   metrics: BrewCalculations;
   lang: Language;
+  embedded?: boolean;
 }
 
 export const ShoppingListModal: React.FC<ShoppingListModalProps> = ({
-  isOpen,
+  isOpen = false,
   onClose,
   recipe,
   metrics,
   lang,
+  embedded = false,
 }) => {
   const [copied, setCopied] = useState(false);
 
-  if (!isOpen) return null;
+  if (!isOpen && !embedded) return null;
 
   // Aggregate malts into kg
   const maltItems = recipe.malts.map((m) => {
@@ -102,27 +104,27 @@ export const ShoppingListModal: React.FC<ShoppingListModalProps> = ({
     setTimeout(() => setCopied(false), 2000);
   };
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
-      <div className="bg-brew-900 border border-slate-700 rounded-3xl w-full max-w-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
-        {/* Header */}
-        <div className="px-6 py-5 border-b border-slate-800 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-amber-500/20 text-amber-400 flex items-center justify-center font-bold">
-              <ShoppingBag className="w-5 h-5" />
-            </div>
-            <div>
-              <h2 className="text-lg font-bold text-white flex items-center gap-2">
-                {lang === 'sv' ? 'Inköpslista Ölkompaniet' : 'Ölkompaniet Shopping List'}
-              </h2>
-              <p className="text-xs text-slate-400">
-                {lang === 'sv'
-                  ? `Avrundat till butikens förpackningar (1kg malt, 100g humle) för ${recipe.name}`
-                  : `Packaged quantities for ${recipe.name}`}
-              </p>
-            </div>
+  const contentMarkup = (
+    <div className={`bg-brew-900 border border-slate-700/80 rounded-3xl w-full ${embedded ? 'shadow-xl' : 'max-w-2xl shadow-2xl max-h-[90vh] flex flex-col'} overflow-hidden`}>
+      {/* Header */}
+      <div className="px-6 py-5 border-b border-slate-800 flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-2xl bg-amber-500/20 text-amber-400 flex items-center justify-center font-bold">
+            <ShoppingBag className="w-5 h-5" />
           </div>
+          <div>
+            <h2 className="text-lg font-bold text-white flex items-center gap-2">
+              {lang === 'sv' ? 'Inköpslista Ölkompaniet' : 'Ölkompaniet Shopping List'}
+            </h2>
+            <p className="text-xs text-slate-400">
+              {lang === 'sv'
+                ? `Avrundat till butikens förpackningar (1kg malt, 100g humle) för ${recipe.name}`
+                : `Packaged quantities for ${recipe.name}`}
+            </p>
+          </div>
+        </div>
 
+        {!embedded && onClose && (
           <button
             onClick={() => {
               playClick();
@@ -132,7 +134,8 @@ export const ShoppingListModal: React.FC<ShoppingListModalProps> = ({
           >
             <X className="w-5 h-5" />
           </button>
-        </div>
+        )}
+      </div>
 
         {/* Content */}
         <div className="p-6 overflow-y-auto space-y-6">
@@ -287,6 +290,15 @@ export const ShoppingListModal: React.FC<ShoppingListModalProps> = ({
           </a>
         </div>
       </div>
+    );
+
+  if (embedded) {
+    return contentMarkup;
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
+      {contentMarkup}
     </div>
   );
 };
