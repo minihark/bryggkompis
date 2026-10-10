@@ -11,6 +11,7 @@ import {
   Beer,
   Sparkles,
   Users,
+  Lightbulb,
 } from 'lucide-react';
 import { playCanPop, playCheersClink, playClick } from '../utils/audio';
 import confetti from 'canvas-confetti';
@@ -24,6 +25,7 @@ interface NavbarProps {
   onExport: () => void;
   onOpenCoop?: () => void;
   onCheers?: () => void;
+  onOpenRecipePicker?: () => void;
   peersCount?: number;
   currentRoom?: string;
   isConnected?: boolean;
@@ -37,6 +39,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   onExport,
   onOpenCoop,
   onCheers,
+  onOpenRecipePicker,
   peersCount = 1,
   currentRoom = 'BROR',
   isConnected = false,
@@ -87,6 +90,21 @@ export const Navbar: React.FC<NavbarProps> = ({
 
         {/* Desktop Controls (hidden on mobile, visible on sm/md+) */}
         <div className="hidden sm:flex items-center gap-2 sm:gap-2.5">
+          {/* Recipe & Style Picker Menu Button */}
+          {onOpenRecipePicker && (
+            <button
+              onClick={() => {
+                playClick();
+                onOpenRecipePicker();
+              }}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-amber-500/30 bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 text-xs font-bold shadow-sm transition cursor-pointer"
+              title={lang === 'sv' ? 'Välj ölstil & receptidéer' : 'Choose beer style & recipes'}
+            >
+              <Lightbulb className="w-3.5 h-3.5 text-amber-400" />
+              <span>{lang === 'sv' ? 'Recept & Stilar' : 'Recipes & Styles'}</span>
+            </button>
+          )}
+
           {/* Co-op Room & Presence Button */}
           {onOpenCoop && (
             <button
@@ -178,6 +196,20 @@ export const Navbar: React.FC<NavbarProps> = ({
             <span>Skål!</span>
           </button>
 
+          {/* Quick Recipe Picker on mobile */}
+          {onOpenRecipePicker && (
+            <button
+              onClick={() => {
+                playClick();
+                onOpenRecipePicker();
+              }}
+              className="p-2 rounded-xl border border-amber-500/40 bg-amber-500/10 text-amber-300 active:scale-95 transition"
+              title="Välj recept & stil"
+            >
+              <Lightbulb className="w-4 h-4" />
+            </button>
+          )}
+
           {/* Quick Co-op on mobile */}
           {onOpenCoop && (
             <button
@@ -235,6 +267,24 @@ export const Navbar: React.FC<NavbarProps> = ({
       {mobileMenuOpen && (
         <div className="sm:hidden border-t border-slate-800/80 bg-brew-950/95 p-4 space-y-3 animate-in fade-in slide-in-from-top-2 duration-200">
           <div className="grid grid-cols-2 gap-2">
+            {onOpenRecipePicker && (
+              <button
+                onClick={() => {
+                  playClick();
+                  setMobileMenuOpen(false);
+                  onOpenRecipePicker();
+                }}
+                className="col-span-2 p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-left flex items-center justify-between text-xs font-bold text-amber-300 active:bg-amber-500/20"
+              >
+                <div className="flex items-center gap-2.5">
+                  <Lightbulb className="w-4 h-4 text-amber-400" />
+                  <span>{lang === 'sv' ? 'Välj Ölstil & Receptidéer' : 'Choose Beer Style & Recipes'}</span>
+                </div>
+                <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 font-bold">
+                  {lang === 'sv' ? 'Bläddra' : 'Browse'}
+                </span>
+              </button>
+            )}
             {onOpenCoop && (
               <button
                 onClick={() => {
