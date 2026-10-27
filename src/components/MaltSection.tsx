@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { MaltItem, Language } from '../types';
 import { CATALOG_MALTS } from '../data/ingredients';
-import { Plus, Trash2, ExternalLink, Wheat } from 'lucide-react';
+import { Plus, Trash2, ExternalLink } from 'lucide-react';
 import { playCanPop, playClick } from '../utils/audio';
 import { srmToHexColor } from '../utils/brewingMath';
 
@@ -26,7 +26,7 @@ export const MaltSection: React.FC<MaltSectionProps> = ({
       id: `malt-${Date.now()}`,
       name: catMalt.name,
       brand: catMalt.brand,
-      amountKg: 1.0,
+      amountKg: 0.5,
       ebc: catMalt.ebc,
       potential: catMalt.potential,
       type: catMalt.type,
@@ -49,21 +49,19 @@ export const MaltSection: React.FC<MaltSectionProps> = ({
   };
 
   return (
-    <div className="bg-brew-900/60 border border-slate-800 rounded-3xl p-5 sm:p-7 shadow-xl space-y-5">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center">
-            <Wheat className="w-4 h-4" />
-          </div>
-          <div>
-            <h3 className="font-bold text-base text-white">
-              {lang === 'sv' ? 'Maltnota & Förjäsbart' : 'Grain Bill & Fermentables'}
-            </h3>
-            <p className="text-xs text-slate-400">
-              {totalGrainKg.toFixed(2)} kg {lang === 'sv' ? 'totalt från Ölkompaniet' : 'total from Ölkompaniet'}
-            </p>
-          </div>
+    <div className="space-y-3.5">
+      {/* Section Header */}
+      <div className="flex items-baseline justify-between border-b border-[#D8CEBE] pb-2">
+        <div>
+          <span className="font-mono text-[10px] uppercase tracking-widest text-[#B85D19] font-bold block">
+            01 • FERMENTABLES
+          </span>
+          <h3 className="font-display font-bold text-lg text-[#1E1610]">
+            {lang === 'sv' ? 'Maltnota' : 'Grain Bill'}{' '}
+            <span className="font-mono text-xs font-normal text-[#5C4B3B]">
+              ({totalGrainKg.toFixed(2)} kg)
+            </span>
+          </h3>
         </div>
 
         <button
@@ -71,61 +69,57 @@ export const MaltSection: React.FC<MaltSectionProps> = ({
             playClick();
             setIsAdding(!isAdding);
           }}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/30 text-xs font-bold transition cursor-pointer"
+          className="inline-flex items-center gap-1 px-2.5 py-1 rounded bg-[#EFE9DC] hover:bg-[#E4DAC7] border border-[#C7B9A3] text-xs font-semibold text-[#1E1610] transition cursor-pointer print:hidden"
         >
-          <Plus className="w-3.5 h-3.5" />
-          <span>{lang === 'sv' ? 'Tillsätt Malt' : 'Add Grain'}</span>
+          <Plus className="w-3.5 h-3.5 text-[#B85D19]" />
+          <span>{lang === 'sv' ? 'Tillsätt malt' : 'Add Malt'}</span>
         </button>
       </div>
 
-      {/* Allocation visual progress bar */}
+      {/* Grain Color Proportional Strip */}
       {totalGrainKg > 0 && (
-        <div className="space-y-1.5">
-          <div className="h-2.5 w-full bg-slate-950 rounded-full overflow-hidden flex ring-1 ring-slate-800">
-            {malts.map((m) => {
-              const pct = (m.amountKg / totalGrainKg) * 100;
-              const color = srmToHexColor(m.ebc / 1.97);
-              return (
-                <div
-                  key={m.id}
-                  style={{ width: `${pct}%`, backgroundColor: color }}
-                  title={`${m.name}: ${pct.toFixed(1)}%`}
-                  className="h-full transition-all duration-300"
-                />
-              );
-            })}
-          </div>
+        <div className="h-2 w-full bg-[#EFE9DC] rounded-xs overflow-hidden flex border border-[#D8CEBE]">
+          {malts.map((m) => {
+            const pct = (m.amountKg / totalGrainKg) * 100;
+            const color = srmToHexColor(m.ebc / 1.97);
+            return (
+              <div
+                key={m.id}
+                style={{ width: `${pct}%`, backgroundColor: color }}
+                title={`${m.name}: ${pct.toFixed(1)}%`}
+                className="h-full transition-all duration-300"
+              />
+            );
+          })}
         </div>
       )}
 
-      {/* Adding Catalog Malt Selector Dropdown */}
+      {/* Catalog Malt Picker */}
       {isAdding && (
-        <div className="p-4 rounded-2xl bg-brew-950/80 border border-amber-500/30 space-y-3 animate-in fade-in duration-200">
-          <div className="flex items-center justify-between text-xs font-bold text-amber-300">
-            <span>{lang === 'sv' ? 'Välj malt från Ölkompaniets sortiment:' : 'Pick malt from Ölkompaniet:'}</span>
+        <div className="p-3 rounded bg-[#EFE9DC] border border-[#B85D19]/50 space-y-2 print:hidden">
+          <div className="flex items-center justify-between text-xs font-bold text-[#1E1610]">
+            <span>{lang === 'sv' ? 'Välj malt (Ölkompaniet):' : 'Pick malt:'}</span>
             <button
               onClick={() => setIsAdding(false)}
-              className="text-slate-400 hover:text-white"
+              className="text-[#5C4B3B] hover:text-[#1E1610] cursor-pointer"
             >
               ✕
             </button>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 max-h-60 overflow-y-auto pr-1">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 max-h-48 overflow-y-auto pr-1">
             {CATALOG_MALTS.map((cm) => (
               <button
                 key={cm.name}
                 onClick={() => handleAddCatalogMalt(cm)}
-                className="p-2.5 rounded-xl bg-brew-900 border border-slate-800 hover:border-amber-500/50 hover:bg-slate-850 text-left transition flex items-center justify-between text-xs cursor-pointer group"
+                className="p-2 rounded bg-[#FBF9F5] border border-[#D8CEBE] hover:border-[#B85D19] text-left transition flex items-center justify-between text-xs cursor-pointer"
               >
                 <div>
-                  <div className="font-bold text-slate-200 group-hover:text-amber-300">
-                    {cm.name}
-                  </div>
-                  <div className="text-[10px] text-slate-400">
+                  <div className="font-bold text-[#1E1610]">{cm.name}</div>
+                  <div className="text-[10px] text-[#5C4B3B]">
                     {cm.brand} • {cm.ebc} EBC
                   </div>
                 </div>
-                <span className="text-[11px] font-mono text-amber-400 font-semibold">
+                <span className="text-[11px] font-mono text-[#B85D19] font-bold">
                   {cm.pricePerKgSek} kr/kg
                 </span>
               </button>
@@ -134,8 +128,8 @@ export const MaltSection: React.FC<MaltSectionProps> = ({
         </div>
       )}
 
-      {/* Malts List Table / Cards */}
-      <div className="space-y-2">
+      {/* Malt Ledger Rows */}
+      <div className="divide-y divide-[#E6DEC8] border border-[#D8CEBE] rounded bg-[#FBF9F5]">
         {malts.map((m) => {
           const pct = totalGrainKg > 0 ? (m.amountKg / totalGrainKg) * 100 : 0;
           const color = srmToHexColor(m.ebc / 1.97);
@@ -143,53 +137,58 @@ export const MaltSection: React.FC<MaltSectionProps> = ({
           return (
             <div
               key={m.id}
-              className="p-3 sm:p-4 rounded-2xl bg-brew-950/60 border border-slate-800/80 hover:border-slate-700 transition flex flex-col sm:flex-row sm:items-center justify-between gap-3"
+              className="px-3 py-2.5 flex items-center justify-between gap-2 hover:bg-[#F7F3EB]/70 transition"
             >
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2.5 min-w-0">
                 <span
-                  className="w-4 h-4 rounded-full border border-white/30 flex-shrink-0 shadow-sm"
+                  className="w-3.5 h-3.5 rounded-full border border-[#1E1610]/30 shrink-0"
                   style={{ backgroundColor: color }}
                   title={`${m.ebc} EBC`}
                 />
-                <div>
-                  <div className="flex items-center gap-2">
-                    <span className="font-bold text-sm text-slate-100">{m.name}</span>
+                <div className="min-w-0">
+                  <div className="flex items-center gap-1.5">
+                    <span className="font-bold text-sm text-[#1E1610] truncate">
+                      {m.name}
+                    </span>
                     <a
                       href={`https://www.olkompaniet.se/search?q=${encodeURIComponent(m.name)}`}
                       target="_blank"
                       rel="noreferrer"
                       title="Sök hos Ölkompaniet.se"
-                      className="text-slate-500 hover:text-amber-400 transition"
+                      className="text-[#8A7765] hover:text-[#B85D19] transition print:hidden"
                     >
-                      <ExternalLink className="w-3.5 h-3.5" />
+                      <ExternalLink className="w-3 h-3" />
                     </a>
                   </div>
-                  <div className="text-xs text-slate-400 font-mono">
-                    {m.brand} • {m.ebc} EBC • {pct.toFixed(1)}% av mäsken
+                  <div className="text-[11px] text-[#5C4B3B] font-mono">
+                    {m.brand} • {m.ebc} EBC • {pct.toFixed(0)}%
                   </div>
                 </div>
               </div>
 
-              {/* Controls: Kg input & delete */}
-              <div className="flex items-center gap-3 self-end sm:self-center">
-                <div className="flex items-center bg-slate-900 border border-slate-800 rounded-xl px-2 py-1">
+              {/* Weight Input & Remove */}
+              <div className="flex items-center gap-1.5 shrink-0">
+                <div className="flex items-center bg-[#EFE9DC] border border-[#C7B9A3] rounded px-2 py-1">
                   <input
                     type="number"
                     step="0.1"
                     min="0.05"
                     max="50"
                     value={m.amountKg}
-                    onChange={(e) => handleUpdateAmount(m.id, parseFloat(e.target.value) || 0)}
-                    className="w-16 bg-transparent text-right font-mono text-sm text-white focus:outline-none pr-1"
+                    onChange={(e) =>
+                      handleUpdateAmount(m.id, parseFloat(e.target.value) || 0)
+                    }
+                    className="w-14 bg-transparent text-right font-mono text-sm font-bold text-[#1E1610] focus:outline-none pr-1"
                   />
-                  <span className="text-xs font-bold text-slate-400">kg</span>
+                  <span className="text-xs font-mono text-[#5C4B3B]">kg</span>
                 </div>
 
                 <button
                   onClick={() => handleRemove(m.id)}
-                  className="p-2 text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 rounded-lg transition"
+                  className="p-1.5 text-[#8A7765] hover:text-[#B85D19] transition cursor-pointer print:hidden"
+                  title="Ta bort malt"
                 >
-                  <Trash2 className="w-4 h-4" />
+                  <Trash2 className="w-3.5 h-3.5" />
                 </button>
               </div>
             </div>

@@ -1,7 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Navbar } from './components/Navbar';
-import { InteractivePintGlass } from './components/InteractivePintGlass';
-import { MetricsCards } from './components/MetricsCards';
 import { MaltSection } from './components/MaltSection';
 import { HopSection } from './components/HopSection';
 import { YeastSection } from './components/YeastSection';
@@ -15,27 +13,22 @@ import { Footer } from './components/Footer';
 import { Recipe, Language, BeerStyle } from './types';
 import { BEER_STYLES } from './data/styles';
 import { calculateBrewMetrics } from './utils/brewingMath';
-import { getTranslation } from './utils/translations';
-import { playCanPop, playClick, playCheersClink } from './utils/audio';
+import { playClick } from './utils/audio';
 import { coop, CheersEvent, PeerInfo } from './utils/coop';
 import {
-  Wheat,
-  Flower2,
-  FlaskConical,
-  ShoppingBag,
   Flame,
-  Lightbulb,
-  Users,
-  ChevronDown,
-  Sparkles,
+  Printer,
   Share2,
+  ChevronDown,
+  ShoppingBag,
+  ArrowRight,
 } from 'lucide-react';
 
 const STORAGE_KEY_RECIPE = 'bryggkompis_recipe_v1';
 const STORAGE_KEY_LANG = 'bryggkompis_lang_v1';
 const STORAGE_KEY_STEPS = 'bryggkompis_steps_v1';
 
-const INITIAL_STYLE = BEER_STYLES[0]; // West Coast IPA
+const INITIAL_STYLE = BEER_STYLES[0];
 
 const DEFAULT_RECIPE: Recipe = {
   id: 'recipe-west-coast',
@@ -52,8 +45,6 @@ const DEFAULT_RECIPE: Recipe = {
   notes: 'Planerad hembryggning med bror-i-lag. Ingredienser från Ölkompaniet i Göteborg!',
   createdAt: new Date().toISOString(),
 };
-
-type StudioTab = 'malt' | 'hops' | 'yeast_water' | 'shopping' | 'brewday';
 
 export function App() {
   const [lang, setLang] = useState<Language>(() => {
@@ -72,16 +63,15 @@ export function App() {
     return DEFAULT_RECIPE;
   });
 
-  // Active formulation layer tab
-  const [activeTab, setActiveTab] = useState<StudioTab>('malt');
+  // Primary 2-mode focus: Recipe Sheet vs Brew Day Timer
+  const [activeMode, setActiveMode] = useState<'recipe' | 'brewday'>('recipe');
 
-  // Modals
+  // Quiet Drawers / Modals
   const [isRecipePickerOpen, setIsRecipePickerOpen] = useState(false);
   const [isCoopModalOpen, setIsCoopModalOpen] = useState(false);
   const [isShoppingModalOpen, setIsShoppingModalOpen] = useState(false);
-  const [isBrewDayModalOpen, setIsBrewDayModalOpen] = useState(false);
 
-  // Completed steps on brew day (synchronized across peers)
+  // Completed steps on brew day
   const [completedSteps, setCompletedSteps] = useState<Record<string, boolean>>(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY_STEPS);
@@ -94,24 +84,12 @@ export function App() {
   const [peers, setPeers] = useState<PeerInfo[]>([]);
   const [isConnected, setIsConnected] = useState<boolean>(false);
   const [lastCheers, setLastCheers] = useState<CheersEvent | null>(null);
-
-  // Avoid echoing recipe back when received from peer
   const isReceivingRecipeSync = useRef(false);
 
-  // Setup Co-op listeners
   useEffect(() => {
-    const unsubCheers = coop.onCheers((cheers) => {
-      setLastCheers(cheers);
-    });
-
-    const unsubPeers = coop.onPeers((peersList) => {
-      setPeers(peersList);
-    });
-
-    const unsubStatus = coop.onStatus((connected) => {
-      setIsConnected(connected);
-    });
-
+    const unsubCheers = coop.onCheers((cheers) => setLastCheers(cheers));
+    const unsubPeers = coop.onPeers((peersList) => setPeers(peersList));
+    const unsubStatus = coop.onStatus((connected) => setIsConnected(connected));
     const unsubRecipe = coop.onRecipe((incomingRecipe) => {
       isReceivingRecipeSync.current = true;
       setRecipe(incomingRecipe);
@@ -119,7 +97,6 @@ export function App() {
         isReceivingRecipeSync.current = false;
       }, 500);
     });
-
     const unsubStep = coop.onStep((stepId, completed) => {
       setCompletedSteps((prev) => {
         const next = { ...prev, [stepId]: completed };
@@ -142,7 +119,6 @@ export function App() {
     };
   }, []);
 
-  // Save changes to localStorage & broadcast recipe updates to peer
   useEffect(() => {
     try {
       localStorage.setItem(STORAGE_KEY_RECIPE, JSON.stringify(recipe));
@@ -159,9 +135,6 @@ export function App() {
     } catch (e) {}
   }, [lang]);
 
-  const t = getTranslation(lang);
-
-  // Real-time calculations
   const metrics = calculateBrewMetrics(
     recipe.batchSizeL,
     recipe.efficiencyPercent,
@@ -171,18 +144,17 @@ export function App() {
   );
 
   const currentStyle = BEER_STYLES.find((s) => s.id === recipe.styleId) || BEER_STYLES[0];
+  const completedStepsCount = Object.values(completedSteps).filter(Boolean).length;
 
-  // Trigger Co-op Cheers
   const handleTriggerCheers = (msg?: string) => {
     coop.sendCheers(msg);
   };
 
-  // Handle style change from Recipe Picker Menu
   const handleSelectStyle = (style: BeerStyle) => {
     const scale = recipe.batchSizeL / 20;
     setRecipe({
       ...recipe,
-      name: lang === 'sv' ? `${style.nameSv} (Bryggdag)` : `${style.name} (Brew Day)`,
+      name: lang === 'sv' ? `${style.nameSv} (Brygglogg)` : `${style.name} (Brew Log)`,
       styleId: style.id,
       mashTempC: style.recommendedMashTempC,
       malts: style.defaultMalts.map((m, i) => ({
@@ -199,7 +171,6 @@ export function App() {
     });
   };
 
-  // Change Batch Size with automatic scaling
   const handleBatchSizeChange = (newSize: number) => {
     playClick();
     const ratio = newSize / recipe.batchSizeL;
@@ -217,7 +188,6 @@ export function App() {
     });
   };
 
-  // Brew Day Step Toggle with Co-op Broadcast
   const handleStepToggle = (stepId: string, completed: boolean) => {
     setCompletedSteps((prev) => {
       const next = { ...prev, [stepId]: completed };
@@ -229,84 +199,43 @@ export function App() {
     coop.broadcastStepToggle(stepId, completed);
   };
 
-  // Export Recipe
   const handleExport = () => {
     playClick();
     const summary = [
       `🍺 ${recipe.name.toUpperCase()} 🍺`,
-      `Stil: ${recipe.styleId} • Volym: ${recipe.batchSizeL} Liter • Effektivitet: ${recipe.efficiencyPercent}%`,
+      `Stil: ${recipe.styleId} • Volym: ${recipe.batchSizeL} L • Effektivitet: ${recipe.efficiencyPercent}%`,
       `OG: ${metrics.og} • FG: ${metrics.fg} • ABV: ${metrics.abv}% • IBU: ${metrics.ibu} • EBC: ${metrics.ebc}`,
-      `Mäskvatten: ${metrics.mashWaterL}L (${recipe.mashTempC}°C) • Lakvatten: ${metrics.spargeWaterL}L (78°C)`,
+      `Mäskvatten: ${metrics.mashWaterL}L (${recipe.mashTempC}°C) • Lakvatten: ${metrics.spargeWaterL}L (77°C)`,
       '',
-      '🌾 MALTNOTA:',
+      'MALTNOTA:',
       ...recipe.malts.map((m) => `  - ${m.amountKg} kg ${m.name} (${m.brand})`),
       '',
-      '🌿 HUMLEGIVOR:',
+      'HUMLESCHEMA:',
       ...recipe.hops.map(
-        (h) => `  - ${h.amountGrams}g ${h.name} (${h.usage === 'dryhop' ? `${h.timeMinutes} dagar torrhumling` : `${h.timeMinutes} min ${h.usage}`})`
+        (h) => `  - ${h.amountGrams}g ${h.name} (${h.usage === 'dryhop' ? `${h.timeMinutes} d torrhumling` : `${h.timeMinutes} min ${h.usage}`})`
       ),
       '',
-      `🧪 JÄST: ${recipe.yeast.name} (${recipe.yeast.brand})`,
+      `JÄST: ${recipe.yeast.name} (${recipe.yeast.brand})`,
       `Anteckningar: ${recipe.notes}`,
-      '',
-      `Dela co-op länk: ${coop.getShareUrl()}`,
-      'Planerat med Bryggkompis (Ölkompaniet.se): https://brygg.apps.harkco.se',
+      `Co-op länk: ${coop.getShareUrl()}`,
     ].join('\n');
 
     navigator.clipboard.writeText(summary);
-    alert(lang === 'sv' ? 'Receptet kopierades till urklipp! Skicka det till din bror-i-lag!' : 'Recipe copied to clipboard!');
+    alert(lang === 'sv' ? 'Receptbladet kopierades till urklipp!' : 'Recipe sheet copied to clipboard!');
   };
 
-  const tabs: { id: StudioTab; labelSv: string; labelEn: string; icon: React.ReactNode; badge?: string }[] = [
-    {
-      id: 'malt',
-      labelSv: '1. Maltnota',
-      labelEn: '1. Grain Bill',
-      icon: <Wheat className="w-4 h-4 text-amber-300" />,
-      badge: `${metrics.totalGrainKg} kg`,
-    },
-    {
-      id: 'hops',
-      labelSv: '2. Humleschema',
-      labelEn: '2. Hop Schedule',
-      icon: <Flower2 className="w-4 h-4 text-emerald-400" />,
-      badge: `${metrics.ibu} IBU`,
-    },
-    {
-      id: 'yeast_water',
-      labelSv: '3. Jäst & Vatten',
-      labelEn: '3. Yeast & Liquor',
-      icon: <FlaskConical className="w-4 h-4 text-sky-400" />,
-      badge: `${metrics.mashWaterL + metrics.spargeWaterL}L`,
-    },
-    {
-      id: 'shopping',
-      labelSv: '4. Inköpslista',
-      labelEn: '4. Shopping Cart',
-      icon: <ShoppingBag className="w-4 h-4 text-yellow-400" />,
-      badge: `Ölkompaniet`,
-    },
-    {
-      id: 'brewday',
-      labelSv: '5. Bryggdag',
-      labelEn: '5. Brew Day',
-      icon: <Flame className="w-4 h-4 text-orange-400" />,
-      badge: `${Object.values(completedSteps).filter(Boolean).length}/10`,
-    },
-  ];
-
   return (
-    <div className="flex flex-col min-h-screen w-full overflow-x-hidden bg-brew-950 text-slate-100">
-      {/* Top Navbar */}
+    <div className="flex flex-col min-h-screen w-full overflow-x-hidden bg-[#F7F3EB] text-[#1E1610]">
+      {/* Warm Craft Brewery Top Bar */}
       <Navbar
         lang={lang}
         onLanguageChange={setLang}
+        activeMode={activeMode}
+        onModeChange={setActiveMode}
+        completedStepsCount={completedStepsCount}
         onOpenShoppingList={() => setIsShoppingModalOpen(true)}
-        onOpenBrewDay={() => setIsBrewDayModalOpen(true)}
         onOpenRecipePicker={() => setIsRecipePickerOpen(true)}
-        onExport={handleExport}
         onOpenCoop={() => setIsCoopModalOpen(true)}
-        onCheers={() => handleTriggerCheers()}
         peersCount={peers.length}
         currentRoom={coop.roomId}
         isConnected={isConnected}
@@ -319,7 +248,7 @@ export function App() {
         myUserName={coop.userName}
       />
 
-      {/* Dedicated Recipe & Style Picker Menu Modal */}
+      {/* Quiet Drawers / Modals */}
       <RecipePickerModal
         isOpen={isRecipePickerOpen}
         onClose={() => setIsRecipePickerOpen(false)}
@@ -328,7 +257,6 @@ export function App() {
         lang={lang}
       />
 
-      {/* Co-op Room & Invite Modal */}
       <CoopModal
         isOpen={isCoopModalOpen}
         onClose={() => setIsCoopModalOpen(false)}
@@ -342,7 +270,6 @@ export function App() {
         lang={lang}
       />
 
-      {/* Shopping & Brew Day Modals */}
       <ShoppingListModal
         isOpen={isShoppingModalOpen}
         onClose={() => setIsShoppingModalOpen(false)}
@@ -351,248 +278,199 @@ export function App() {
         lang={lang}
       />
 
-      <BrewDayChecklist
-        isOpen={isBrewDayModalOpen}
-        onClose={() => setIsBrewDayModalOpen(false)}
-        recipe={recipe}
-        metrics={metrics}
-        lang={lang}
-        externalCompletedSteps={completedSteps}
-        onStepToggle={handleStepToggle}
-      />
+      {/* MAIN WORKSPACE */}
+      <main className="flex-1 max-w-5xl w-full mx-auto px-4 py-6 sm:py-8">
+        {activeMode === 'recipe' ? (
+          /* THE SINGLE ACTIVE RECIPE SHEET (85% Visual Weight) */
+          <article className="bg-[#FBF9F5] border border-[#D8CEBE] rounded-lg shadow-xs overflow-hidden">
+            {/* Top Copper Rule */}
+            <div className="h-1.5 w-full bg-[#B85D19]" />
 
-      {/* MAIN CONTAINER (Spacious, Room to Breathe!) */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-7 sm:space-y-8">
-        {/* RECIPE HERO HEADER CARD */}
-        <section className="bg-brew-900/85 border border-slate-800 rounded-3xl p-5 sm:p-8 shadow-2xl relative overflow-hidden">
-          {/* Ambient Amber Glow */}
-          <div className="absolute top-0 right-0 w-96 h-96 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
+            {/* 1. Recipe Sheet Masthead */}
+            <div className="p-5 sm:p-7 border-b border-[#D8CEBE] flex flex-col lg:flex-row lg:items-end justify-between gap-5">
+              <div className="space-y-2 flex-1 min-w-0">
+                <div className="flex flex-wrap items-center gap-2">
+                  <button
+                    onClick={() => {
+                      playClick();
+                      setIsRecipePickerOpen(true);
+                    }}
+                    className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded bg-[#EFE9DC] hover:bg-[#E4DAC7] border border-[#C7B9A3] font-mono text-[11px] font-bold uppercase tracking-wider text-[#B85D19] transition cursor-pointer print:border-none"
+                  >
+                    <span>{lang === 'sv' ? currentStyle.nameSv : currentStyle.name}</span>
+                    <ChevronDown className="w-3 h-3 print:hidden" />
+                  </button>
 
-          <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
-            {/* Title, Style Button & Notes */}
-            <div className="space-y-3 flex-1 min-w-0">
-              <div className="flex flex-wrap items-center gap-2.5">
-                {/* Recipe & Style Picker Menu Trigger */}
-                <button
-                  onClick={() => {
-                    playClick();
-                    setIsRecipePickerOpen(true);
-                  }}
-                  className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/35 text-amber-300 font-extrabold text-xs transition cursor-pointer shadow-sm group"
-                  title="Klicka för att välja en annan ölstil eller receptidé"
-                >
-                  <Lightbulb className="w-3.5 h-3.5 text-amber-400 group-hover:scale-110 transition-transform" />
-                  <span>{lang === 'sv' ? currentStyle.nameSv : currentStyle.name}</span>
-                  <ChevronDown className="w-3 h-3 text-amber-400/80" />
-                  <span className="text-[10px] text-amber-400/70 uppercase font-bold tracking-wider ml-1">
-                    ({lang === 'sv' ? 'Byt stil' : 'Change style'})
+                  <span className="font-mono text-[11px] text-[#8A7765]">
+                    • BRYGGLOGG #{recipe.id.slice(-4).toUpperCase()}
                   </span>
-                </button>
+                </div>
 
-                {/* Co-op indicator */}
-                <button
-                  onClick={() => setIsCoopModalOpen(true)}
-                  className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-900/80 hover:bg-slate-850 border border-slate-800 text-slate-300 text-xs font-semibold transition cursor-pointer"
-                >
-                  <span className={`w-2 h-2 rounded-full ${isConnected ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'}`} />
-                  <span className="font-mono text-[11px]">Rum: {coop.roomId}</span>
-                  <span className="text-[10px] text-emerald-400 font-bold">
-                    {peers.length > 1 ? `(${peers.length} aktiva)` : ''}
-                  </span>
-                </button>
+                <input
+                  type="text"
+                  value={recipe.name}
+                  onChange={(e) => setRecipe({ ...recipe, name: e.target.value })}
+                  className="w-full font-display font-bold text-2xl sm:text-4xl text-[#1E1610] bg-transparent border-b border-transparent hover:border-[#D8CEBE] focus:border-[#B85D19] focus:outline-none py-0.5"
+                  placeholder={lang === 'sv' ? 'Namnge brygden...' : 'Name your brew...'}
+                />
+
+                <input
+                  type="text"
+                  value={recipe.notes}
+                  onChange={(e) => setRecipe({ ...recipe, notes: e.target.value })}
+                  className="w-full font-serif italic text-xs sm:text-sm text-[#5C4B3B] bg-transparent border-b border-transparent hover:border-[#D8CEBE] focus:border-[#B85D19] focus:outline-none py-0.5"
+                  placeholder={lang === 'sv' ? 'Brygganteckningar...' : 'Brewer notes...'}
+                />
               </div>
 
-              {/* Recipe Name */}
-              <input
-                type="text"
-                value={recipe.name}
-                onChange={(e) => setRecipe({ ...recipe, name: e.target.value })}
-                className="w-full text-2xl sm:text-4xl lg:text-5xl font-black bg-transparent border-b border-transparent hover:border-slate-700 focus:border-amber-500 text-white focus:outline-none transition py-1"
-                placeholder={lang === 'sv' ? 'Namnge ert öl...' : 'Name your beer...'}
-              />
-
-              {/* Recipe Notes */}
-              <input
-                type="text"
-                value={recipe.notes}
-                onChange={(e) => setRecipe({ ...recipe, notes: e.target.value })}
-                className="w-full text-xs sm:text-sm text-slate-400 bg-transparent border-b border-transparent hover:border-slate-800 focus:border-amber-500 focus:outline-none transition py-0.5"
-                placeholder={lang === 'sv' ? 'Anteckningar inför bryggdagen med bror-i-lag...' : 'Brew day notes...'}
-              />
-            </div>
-
-            {/* Quick Batch Controls & Big Cheers Button */}
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3.5 bg-brew-950/80 border border-slate-800/80 rounded-2xl p-4 flex-shrink-0">
-              {/* Batch Size Selection */}
-              <div>
-                <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider block mb-1.5">
-                  {t.batchSize}
-                </span>
-                <div className="flex items-center gap-1.5">
-                  {[10, 20, 25, 30, 50].map((size) => (
+              {/* Compact Batch Size, Mash Temp & Print/Cheers Controls */}
+              <div className="flex flex-wrap items-center gap-3 self-start lg:self-end print:hidden">
+                <div className="flex items-center bg-[#EFE9DC] border border-[#C7B9A3] p-0.5 rounded">
+                  {[10, 20, 25, 30].map((size) => (
                     <button
                       key={size}
                       onClick={() => handleBatchSizeChange(size)}
-                      className={`px-3 py-1.5 rounded-xl text-xs font-bold transition text-center cursor-pointer ${
+                      className={`px-2.5 py-1 rounded-xs font-mono text-xs font-bold transition cursor-pointer ${
                         recipe.batchSizeL === size
-                          ? 'bg-amber-500 text-stone-950 shadow-md font-black ring-1 ring-amber-400'
-                          : 'bg-slate-900 border border-slate-800 text-slate-300 hover:text-white hover:bg-slate-850'
+                          ? 'bg-[#1E1610] text-[#F7F3EB]'
+                          : 'text-[#5C4B3B] hover:text-[#1E1610]'
                       }`}
                     >
                       {size}L
                     </button>
                   ))}
                 </div>
-              </div>
 
-              {/* Mash Temp & Efficiency */}
-              <div className="flex items-center gap-3 sm:border-l sm:border-slate-800 sm:pl-3.5 pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-800/80">
-                <div>
-                  <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider block mb-1">
-                    {t.mashTemp}
-                  </span>
-                  <div className="flex items-center gap-1.5">
-                    <input
-                      type="number"
-                      min="62"
-                      max="72"
-                      step="0.5"
-                      value={recipe.mashTempC}
-                      onChange={(e) =>
-                        setRecipe({ ...recipe, mashTempC: parseFloat(e.target.value) || 66 })
-                      }
-                      className="w-16 bg-slate-900 border border-slate-800 rounded-xl px-2 py-1 text-center font-mono text-xs font-bold text-white focus:outline-none focus:border-amber-500"
-                    />
-                    <span className="text-xs text-slate-400">°C</span>
-                  </div>
+                <div className="flex items-center gap-1 bg-[#EFE9DC] border border-[#C7B9A3] rounded px-2.5 py-1">
+                  <span className="font-mono text-[10px] uppercase text-[#5C4B3B]">Mäsk:</span>
+                  <input
+                    type="number"
+                    min="62"
+                    max="72"
+                    step="0.5"
+                    value={recipe.mashTempC}
+                    onChange={(e) =>
+                      setRecipe({ ...recipe, mashTempC: parseFloat(e.target.value) || 66 })
+                    }
+                    className="w-11 bg-transparent text-right font-mono text-xs font-bold text-[#1E1610] focus:outline-none"
+                  />
+                  <span className="font-mono text-xs text-[#5C4B3B]">°C</span>
                 </div>
 
-                <div className="border-l border-slate-800 pl-3">
-                  <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider block mb-1">
-                    {t.efficiency}
-                  </span>
-                  <div className="flex items-center gap-1.5">
-                    <input
-                      type="number"
-                      min="60"
-                      max="90"
-                      step="1"
-                      value={recipe.efficiencyPercent}
-                      onChange={(e) =>
-                        setRecipe({ ...recipe, efficiencyPercent: parseInt(e.target.value, 10) || 75 })
-                      }
-                      className="w-14 bg-slate-900 border border-slate-800 rounded-xl px-2 py-1 text-center font-mono text-xs font-bold text-white focus:outline-none focus:border-amber-500"
-                    />
-                    <span className="text-xs text-slate-400">%</span>
-                  </div>
-                </div>
-              </div>
+                <button
+                  onClick={() => window.print()}
+                  className="p-2 rounded bg-[#EFE9DC] hover:bg-[#E4DAC7] border border-[#C7B9A3] text-[#1E1610] transition cursor-pointer"
+                  title={lang === 'sv' ? 'Skriv ut A4 Brygglogg' : 'Print A4 Brew Sheet'}
+                >
+                  <Printer className="w-4 h-4 text-[#B85D19]" />
+                </button>
 
-              {/* Big Co-op Cheers Button */}
-              <div className="pt-2 sm:pt-0 sm:border-l sm:border-slate-800 sm:pl-3.5 flex items-center">
+                <button
+                  onClick={handleExport}
+                  className="p-2 rounded bg-[#EFE9DC] hover:bg-[#E4DAC7] border border-[#C7B9A3] text-[#1E1610] transition cursor-pointer"
+                  title={lang === 'sv' ? 'Kopiera recept till urklipp' : 'Copy recipe'}
+                >
+                  <Share2 className="w-4 h-4 text-[#5C4B3B]" />
+                </button>
+
                 <button
                   onClick={() => handleTriggerCheers()}
-                  className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2.5 rounded-2xl bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 hover:brightness-110 active:scale-95 text-stone-950 font-black text-xs sm:text-sm shadow-lg shadow-amber-500/25 transition cursor-pointer"
-                  title="Skåla i realtid på båda skärmarna!"
+                  className="px-3 py-1.5 rounded bg-[#B85D19] hover:bg-[#9E4D12] text-[#FBF9F5] font-bold text-xs flex items-center gap-1.5 shadow-2xs transition cursor-pointer"
+                  title="Skåla i realtid med bryggarkompisen"
                 >
-                  <span className="text-base animate-bounce">🍻</span>
-                  <span>{lang === 'sv' ? 'SKÅL MED BROR!' : 'CHEERS!'}</span>
+                  <span>🍻</span>
+                  <span>{lang === 'sv' ? 'Skål!' : 'Cheers!'}</span>
                 </button>
               </div>
             </div>
-          </div>
-        </section>
 
-        {/* HERO CANVAS: FULL INTERACTIVE PINT GLASS & METRICS GAUGES */}
-        <section className="grid grid-cols-1 lg:grid-cols-4 gap-6 items-center">
-          {/* Pint Glass on the left: Full, tactile, bubbling! */}
-          <div className="lg:col-span-1 bg-brew-900/60 border border-slate-800 rounded-3xl p-5 flex items-center justify-center shadow-xl">
-            <InteractivePintGlass
-              colorHex={metrics.colorHex}
-              ebc={metrics.ebc}
-              abv={metrics.abv}
-              ibu={metrics.ibu}
-            />
-          </div>
-
-          {/* Metrics Gauges on the right: Full cards with target ranges */}
-          <div className="lg:col-span-3">
-            <MetricsCards metrics={metrics} styleId={recipe.styleId} lang={lang} />
-          </div>
-        </section>
-
-        {/* STUDIO LAYER NAVIGATION TABS */}
-        <section className="border-b border-slate-800/80 pb-1">
-          <div className="flex items-center gap-2 overflow-x-auto pb-2 no-scrollbar">
-            {tabs.map((tab) => {
-              const isActive = activeTab === tab.id;
-              return (
-                <button
-                  key={tab.id}
-                  onClick={() => {
-                    playClick();
-                    setActiveTab(tab.id);
-                  }}
-                  className={`flex items-center gap-2.5 px-4 sm:px-5 py-3 rounded-2xl text-xs sm:text-sm font-bold transition flex-shrink-0 cursor-pointer ${
-                    isActive
-                      ? 'bg-amber-500 text-stone-950 shadow-lg shadow-amber-500/20 ring-1 ring-amber-400 font-extrabold'
-                      : 'bg-brew-900/80 hover:bg-brew-850 text-slate-300 hover:text-white border border-slate-800'
-                  }`}
-                >
-                  <span>{tab.icon}</span>
-                  <span>{lang === 'sv' ? tab.labelSv : tab.labelEn}</span>
-                  {tab.badge && (
-                    <span
-                      className={`text-[10px] px-2 py-0.5 rounded-full font-mono font-bold ${
-                        isActive
-                          ? 'bg-stone-950/20 text-stone-950'
-                          : 'bg-slate-800 text-slate-400'
-                      }`}
-                    >
-                      {tab.badge}
-                    </span>
-                  )}
-                </button>
-              );
-            })}
-          </div>
-        </section>
-
-        {/* ACTIVE FORMULATION STUDIO WORKSPACE */}
-        <section className="space-y-6">
-          {/* Layer 1: Maltnota */}
-          {activeTab === 'malt' && (
-            <div className="animate-in fade-in duration-200">
-              <MaltSection
-                malts={recipe.malts}
-                onChange={(malts) => setRecipe({ ...recipe, malts })}
-                lang={lang}
-              />
-            </div>
-          )}
-
-          {/* Layer 2: Humleschema */}
-          {activeTab === 'hops' && (
-            <div className="animate-in fade-in duration-200">
-              <HopSection
-                hops={recipe.hops}
-                onChange={(hops) => setRecipe({ ...recipe, hops })}
-                lang={lang}
-              />
-            </div>
-          )}
-
-          {/* Layer 3: Jäst & Vatten (Unified Fermentation & Liquor Planning) */}
-          {activeTab === 'yeast_water' && (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 animate-in fade-in duration-200">
+            {/* 2. Unified Brewer's Specification Ledger Strip (Replaces multi-card gauges) */}
+            <div className="bg-[#EFE9DC] border-b border-[#D8CEBE] px-5 sm:px-7 py-3.5 grid grid-cols-2 sm:grid-cols-6 gap-3 items-center">
               <div>
+                <div className="font-mono text-[10px] uppercase tracking-wider text-[#5C4B3B]">
+                  ALKOHOL (ABV)
+                </div>
+                <div className="font-mono font-bold text-lg text-[#B85D19]">
+                  {metrics.abv}%
+                </div>
+              </div>
+
+              <div>
+                <div className="font-mono text-[10px] uppercase tracking-wider text-[#5C4B3B]">
+                  STARTDENSITET (OG)
+                </div>
+                <div className="font-mono font-bold text-lg text-[#1E1610]">
+                  {metrics.og}
+                </div>
+              </div>
+
+              <div>
+                <div className="font-mono text-[10px] uppercase tracking-wider text-[#5C4B3B]">
+                  SLUTDENSITET (FG)
+                </div>
+                <div className="font-mono font-bold text-lg text-[#1E1610]">
+                  {metrics.fg}
+                </div>
+              </div>
+
+              <div>
+                <div className="font-mono text-[10px] uppercase tracking-wider text-[#5C4B3B]">
+                  BESKA (IBU)
+                </div>
+                <div className="font-mono font-bold text-lg text-[#2D5A27]">
+                  {metrics.ibu} IBU
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2.5">
+                <span
+                  className="w-7 h-7 rounded-full border-2 border-[#1E1610]/40 shadow-inner shrink-0"
+                  style={{ backgroundColor: metrics.colorHex }}
+                  title={`${metrics.ebc} EBC`}
+                />
+                <div>
+                  <div className="font-mono text-[10px] uppercase tracking-wider text-[#5C4B3B]">
+                    FÄRG (EBC)
+                  </div>
+                  <div className="font-mono font-bold text-lg text-[#1E1610]">
+                    {metrics.ebc}
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <div className="font-mono text-[10px] uppercase tracking-wider text-[#5C4B3B]">
+                  VATTEN (MÄSK/LAK)
+                </div>
+                <div className="font-mono font-bold text-sm text-[#1E1610]">
+                  {metrics.mashWaterL}L + {metrics.spargeWaterL}L
+                </div>
+              </div>
+            </div>
+
+            {/* 3. Main Recipe Sheet Body: Malt & Hops Side-by-Side + Yeast & Water Below */}
+            <div className="p-5 sm:p-7 space-y-8">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-7">
+                <MaltSection
+                  malts={recipe.malts}
+                  onChange={(malts) => setRecipe({ ...recipe, malts })}
+                  lang={lang}
+                />
+
+                <HopSection
+                  hops={recipe.hops}
+                  onChange={(hops) => setRecipe({ ...recipe, hops })}
+                  lang={lang}
+                />
+              </div>
+
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-7 pt-2 border-t border-[#E6DEC8]">
                 <YeastSection
                   yeast={recipe.yeast}
                   onChange={(yeast) => setRecipe({ ...recipe, yeast })}
                   lang={lang}
                 />
-              </div>
-              <div>
+
                 <WaterCalculator
                   metrics={metrics}
                   batchSizeL={recipe.batchSizeL}
@@ -601,39 +479,55 @@ export function App() {
                 />
               </div>
             </div>
-          )}
 
-          {/* Layer 4: Inköpslista (Direct Ölkompaniet Cart Planner) */}
-          {activeTab === 'shopping' && (
-            <div className="animate-in fade-in duration-200">
-              <ShoppingListModal
-                isOpen={true}
-                recipe={recipe}
-                metrics={metrics}
-                lang={lang}
-                embedded={true}
-              />
-            </div>
-          )}
+            {/* 4. Sheet Footer Bar: Quiet Shopping Trigger + Single Primary CTA to Start Brew Day */}
+            <div className="bg-[#EFE9DC] border-t border-[#D8CEBE] px-5 sm:px-7 py-4 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 print:hidden">
+              <button
+                onClick={() => {
+                  playClick();
+                  setIsShoppingModalOpen(true);
+                }}
+                className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded bg-[#FBF9F5] hover:bg-white border border-[#C7B9A3] text-xs font-bold text-[#1E1610] transition cursor-pointer"
+              >
+                <ShoppingBag className="w-4 h-4 text-[#B85D19]" />
+                <span>
+                  {lang === 'sv'
+                    ? `Öppna Inköpslista (${metrics.totalGrainKg} kg malt, ${recipe.hops.reduce((s, h) => s + h.amountGrams, 0)}g humle)`
+                    : 'Open Shopping List'}
+                </span>
+              </button>
 
-          {/* Layer 5: Bryggdag (Checklist & Countdown Timer with Co-op Sync) */}
-          {activeTab === 'brewday' && (
-            <div className="animate-in fade-in duration-200">
-              <BrewDayChecklist
-                isOpen={true}
-                recipe={recipe}
-                metrics={metrics}
-                lang={lang}
-                embedded={true}
-                externalCompletedSteps={completedSteps}
-                onStepToggle={handleStepToggle}
-              />
+              <button
+                onClick={() => {
+                  playClick();
+                  setActiveMode('brewday');
+                }}
+                className="inline-flex items-center justify-center gap-2 px-6 py-2.5 rounded bg-[#B85D19] hover:bg-[#9E4D12] text-[#FBF9F5] font-display font-bold text-sm tracking-wide shadow-xs transition cursor-pointer"
+              >
+                <Flame className="w-4 h-4" />
+                <span>
+                  {lang === 'sv'
+                    ? `Till Bryggdag & Kokklocka (${completedStepsCount}/10)`
+                    : `Start Brew Day & Timer (${completedStepsCount}/10)`}
+                </span>
+                <ArrowRight className="w-4 h-4" />
+              </button>
             </div>
-          )}
-        </section>
+          </article>
+        ) : (
+          /* STEP-BY-STEP BREW DAY PROTOCOL & TIMER */
+          <BrewDayChecklist
+            isOpen={true}
+            embedded={true}
+            recipe={recipe}
+            metrics={metrics}
+            lang={lang}
+            externalCompletedSteps={completedSteps}
+            onStepToggle={handleStepToggle}
+          />
+        )}
       </main>
 
-      {/* Footer */}
       <Footer />
     </div>
   );

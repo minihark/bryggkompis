@@ -1,31 +1,17 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Language } from '../types';
-import {
-  ShoppingBag,
-  Flame,
-  Share2,
-  Menu,
-  X,
-  Languages,
-  Check,
-  Beer,
-  Sparkles,
-  Users,
-  Lightbulb,
-} from 'lucide-react';
-import { playCanPop, playCheersClink, playClick } from '../utils/audio';
-import confetti from 'canvas-confetti';
-import { getTranslation } from '../utils/translations';
+import { ShoppingBag, Users, Flame, FileText } from 'lucide-react';
+import { playClick } from '../utils/audio';
 
 interface NavbarProps {
   lang: Language;
   onLanguageChange: (lang: Language) => void;
+  activeMode: 'recipe' | 'brewday';
+  onModeChange: (mode: 'recipe' | 'brewday') => void;
+  completedStepsCount: number;
   onOpenShoppingList: () => void;
-  onOpenBrewDay: () => void;
-  onExport: () => void;
-  onOpenCoop?: () => void;
-  onCheers?: () => void;
-  onOpenRecipePicker?: () => void;
+  onOpenRecipePicker: () => void;
+  onOpenCoop: () => void;
   peersCount?: number;
   currentRoom?: string;
   isConnected?: boolean;
@@ -34,325 +20,137 @@ interface NavbarProps {
 export const Navbar: React.FC<NavbarProps> = ({
   lang,
   onLanguageChange,
+  activeMode,
+  onModeChange,
+  completedStepsCount,
   onOpenShoppingList,
-  onOpenBrewDay,
-  onExport,
-  onOpenCoop,
-  onCheers,
   onOpenRecipePicker,
+  onOpenCoop,
   peersCount = 1,
   currentRoom = 'BROR',
   isConnected = false,
 }) => {
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const t = getTranslation(lang);
-
-  const handleSkal = () => {
-    if (onCheers) {
-      onCheers();
-    } else {
-      playCanPop();
-      playCheersClink();
-      try {
-        confetti({
-          particleCount: 50,
-          spread: 70,
-          origin: { y: 0.6 },
-        });
-      } catch (e) {}
-    }
-  };
-
   return (
-    <header className="sticky top-0 z-40 border-b border-slate-800/80 bg-brew-950/90 backdrop-blur-md w-full">
-      <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-2">
-        {/* Brand */}
-        <div className="flex items-center gap-2 sm:gap-3 min-w-0">
-          <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-gradient-to-tr from-amber-500 via-orange-500 to-amber-600 flex items-center justify-center text-lg sm:text-xl shadow-md shadow-amber-500/20 ring-1 ring-amber-400/30 flex-shrink-0">
-            🍺
-          </div>
-          <div className="min-w-0">
-            <div className="flex items-center gap-1.5">
-              <span className="font-extrabold text-base sm:text-lg tracking-tight bg-gradient-to-r from-amber-200 via-white to-amber-400 bg-clip-text text-transparent truncate">
-                Bryggkompis
-              </span>
-              <span className="hidden sm:inline-block text-[10px] uppercase font-bold tracking-widest px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/20 flex-shrink-0">
-                Ölkompaniet
-              </span>
-            </div>
-            <p className="text-[11px] text-slate-400 hidden md:block truncate">
-              {lang === 'sv'
-                ? 'Receptplanerare för dig och din bror-i-lag'
-                : 'Brew recipe planner for you and your brother-in-law'}
-            </p>
-          </div>
-        </div>
-
-        {/* Desktop Controls (hidden on mobile, visible on sm/md+) */}
-        <div className="hidden sm:flex items-center gap-2 sm:gap-2.5">
-          {/* Recipe & Style Picker Menu Button */}
-          {onOpenRecipePicker && (
-            <button
-              onClick={() => {
-                playClick();
-                onOpenRecipePicker();
-              }}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-amber-500/30 bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 text-xs font-bold shadow-sm transition cursor-pointer"
-              title={lang === 'sv' ? 'Välj ölstil & receptidéer' : 'Choose beer style & recipes'}
-            >
-              <Lightbulb className="w-3.5 h-3.5 text-amber-400" />
-              <span>{lang === 'sv' ? 'Recept & Stilar' : 'Recipes & Styles'}</span>
-            </button>
-          )}
-
-          {/* Co-op Room & Presence Button */}
-          {onOpenCoop && (
-            <button
-              onClick={() => {
-                playClick();
-                onOpenCoop();
-              }}
-              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border border-slate-800 bg-brew-900/70 hover:bg-brew-850 hover:border-emerald-500/50 text-slate-200 text-xs font-semibold transition cursor-pointer"
-              title={lang === 'sv' ? `Co-op rum: ${currentRoom}` : `Co-op room: ${currentRoom}`}
-            >
-              <span className={`w-2 h-2 rounded-full ${isConnected ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'}`} />
-              <span className="hidden md:inline font-mono font-bold text-amber-300">{currentRoom}</span>
-              <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-emerald-500/20 text-emerald-300 font-bold">
-                {peersCount > 1 ? `${peersCount} 🟢` : 'Co-op'}
-              </span>
-            </button>
-          )}
-
-          {/* Fun "Skål!" Cheers Button */}
+    <header className="sticky top-0 z-40 border-b border-[#D8CEBE] bg-[#F7F3EB]/95 backdrop-blur-sm w-full print:hidden">
+      <div className="max-w-5xl mx-auto px-4 h-14 flex items-center justify-between gap-3">
+        {/* Left: Craft Brewery Brand & Style Picker Trigger */}
+        <div className="flex items-center gap-3 min-w-0">
           <button
-            onClick={handleSkal}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-stone-950 font-black text-xs shadow-md shadow-amber-500/20 active:scale-95 transition cursor-pointer"
-            title="Klicka för Skål!"
+            onClick={() => {
+              playClick();
+              onModeChange('recipe');
+            }}
+            className="flex items-center gap-2 text-left cursor-pointer group"
           >
-            <span>🍻</span>
-            <span>{t.skal}</span>
+            <span className="w-7 h-7 rounded bg-[#1E1610] text-[#F7F3EB] flex items-center justify-center text-sm shadow-xs">
+              🍺
+            </span>
+            <span className="font-display font-bold text-lg sm:text-xl tracking-tight text-[#1E1610] group-hover:text-[#B85D19] transition-colors">
+              Bryggkompis
+            </span>
           </button>
 
-          {/* Inköpslista */}
+          <span className="text-[#C7B9A3] hidden sm:inline">/</span>
+
+          <button
+            onClick={() => {
+              playClick();
+              onOpenRecipePicker();
+            }}
+            className="hidden sm:inline-flex items-center gap-1 text-xs font-medium text-[#5C4B3B] hover:text-[#B85D19] transition cursor-pointer"
+          >
+            <span>{lang === 'sv' ? 'Byt ölstil & recept' : 'Change beer style'}</span>
+            <span className="text-[10px] text-[#B85D19]">▾</span>
+          </button>
+        </div>
+
+        {/* Center: Primary 2-Mode Switch (Receptblad vs Bryggdag & Klocka) */}
+        <div className="flex items-center bg-[#EFE9DC] border border-[#D8CEBE] p-0.5 rounded">
+          <button
+            onClick={() => {
+              playClick();
+              onModeChange('recipe');
+            }}
+            className={`flex items-center gap-1.5 px-3 py-1 rounded-xs text-xs font-bold transition cursor-pointer ${
+              activeMode === 'recipe'
+                ? 'bg-[#1E1610] text-[#F7F3EB] shadow-2xs'
+                : 'text-[#5C4B3B] hover:text-[#1E1610]'
+            }`}
+          >
+            <FileText className="w-3.5 h-3.5" />
+            <span>{lang === 'sv' ? 'Receptblad' : 'Recipe Sheet'}</span>
+          </button>
+
+          <button
+            onClick={() => {
+              playClick();
+              onModeChange('brewday');
+            }}
+            className={`flex items-center gap-1.5 px-3 py-1 rounded-xs text-xs font-bold transition cursor-pointer ${
+              activeMode === 'brewday'
+                ? 'bg-[#B85D19] text-[#FBF9F5] shadow-2xs'
+                : 'text-[#5C4B3B] hover:text-[#1E1610]'
+            }`}
+          >
+            <Flame className="w-3.5 h-3.5" />
+            <span>{lang === 'sv' ? 'Bryggdag & Klocka' : 'Brew Day'}</span>
+            <span
+              className={`font-mono text-[10px] px-1 rounded ${
+                activeMode === 'brewday'
+                  ? 'bg-black/20 text-white'
+                  : 'bg-[#D8CEBE]/70 text-[#1E1610]'
+              }`}
+            >
+              {completedStepsCount}/10
+            </span>
+          </button>
+        </div>
+
+        {/* Right: Quiet Drawers (Inköpslista & Co-op Room) */}
+        <div className="flex items-center gap-2">
           <button
             onClick={() => {
               playClick();
               onOpenShoppingList();
             }}
-            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border border-slate-800 bg-brew-900/70 hover:bg-brew-850 hover:border-amber-500/40 text-slate-200 text-xs font-semibold transition cursor-pointer"
+            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded bg-[#FBF9F5] border border-[#D8CEBE] hover:border-[#B85D19] text-xs font-semibold text-[#1E1610] transition cursor-pointer"
+            title={lang === 'sv' ? 'Öppna inköpslista (Ölkompaniet)' : 'Open shopping list'}
           >
-            <ShoppingBag className="w-3.5 h-3.5 text-amber-400" />
-            <span className="hidden md:inline">{t.shoppingList}</span>
-            <span className="md:hidden">Inköp</span>
+            <ShoppingBag className="w-3.5 h-3.5 text-[#B85D19]" />
+            <span className="hidden md:inline">{lang === 'sv' ? 'Inköpslista' : 'Shopping'}</span>
           </button>
 
-          {/* Bryggdag */}
           <button
             onClick={() => {
               playClick();
-              onOpenBrewDay();
+              onOpenCoop();
             }}
-            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border border-slate-800 bg-brew-900/70 hover:bg-brew-850 hover:border-orange-500/40 text-slate-200 text-xs font-semibold transition cursor-pointer"
+            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded bg-[#FBF9F5] border border-[#D8CEBE] hover:border-[#B85D19] text-xs font-mono font-semibold text-[#1E1610] transition cursor-pointer"
+            title={lang === 'sv' ? `Co-op rum: ${currentRoom}` : `Co-op room: ${currentRoom}`}
           >
-            <Flame className="w-3.5 h-3.5 text-orange-400" />
-            <span className="hidden md:inline">{t.brewDay}</span>
-            <span className="md:hidden">Bryggdag</span>
+            <span
+              className={`w-2 h-2 rounded-full ${
+                isConnected ? 'bg-[#2D5A27]' : 'bg-[#B85D19]'
+              }`}
+            />
+            <span className="hidden sm:inline">{currentRoom}</span>
+            {peersCount > 1 && (
+              <span className="text-[10px] text-[#2D5A27] font-bold">({peersCount})</span>
+            )}
+            <Users className="w-3.5 h-3.5 text-[#5C4B3B] sm:hidden" />
           </button>
 
-          {/* Export Recipe */}
-          <button
-            onClick={() => {
-              playClick();
-              onExport();
-            }}
-            className="p-2 rounded-xl border border-slate-800 bg-brew-900/70 hover:bg-brew-850 text-slate-300 hover:text-white transition flex items-center gap-1 text-xs"
-            title="Dela eller kopiera recept"
-          >
-            <Share2 className="w-3.5 h-3.5" />
-            <span className="hidden lg:inline">{t.exportRecipe}</span>
-          </button>
-
-          {/* Language Switcher */}
           <button
             onClick={() => {
               playClick();
               onLanguageChange(lang === 'sv' ? 'en' : 'sv');
             }}
-            className="px-2.5 py-1.5 rounded-xl border border-slate-800 bg-brew-900/70 hover:bg-brew-850 text-slate-300 hover:text-white text-xs font-bold transition flex items-center gap-1"
-            title="Byt språk / Switch Language"
+            className="hidden lg:inline-flex px-2 py-1.5 rounded bg-[#EFE9DC] border border-[#D8CEBE] hover:border-[#B85D19] font-mono text-[11px] font-bold text-[#5C4B3B] hover:text-[#1E1610] transition cursor-pointer"
           >
-            <span>{lang === 'sv' ? '🇸🇪 SV' : '🇬🇧 EN'}</span>
-          </button>
-        </div>
-
-        {/* Mobile Header Bar (compact, fits every phone!) */}
-        <div className="flex sm:hidden items-center gap-1.5">
-          {/* Quick Skål! on mobile */}
-          <button
-            onClick={handleSkal}
-            className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 text-stone-950 font-black text-xs shadow-sm active:scale-95 transition"
-          >
-            <span>🍻</span>
-            <span>Skål!</span>
-          </button>
-
-          {/* Quick Recipe Picker on mobile */}
-          {onOpenRecipePicker && (
-            <button
-              onClick={() => {
-                playClick();
-                onOpenRecipePicker();
-              }}
-              className="p-2 rounded-xl border border-amber-500/40 bg-amber-500/10 text-amber-300 active:scale-95 transition"
-              title="Välj recept & stil"
-            >
-              <Lightbulb className="w-4 h-4" />
-            </button>
-          )}
-
-          {/* Quick Co-op on mobile */}
-          {onOpenCoop && (
-            <button
-              onClick={() => {
-                playClick();
-                onOpenCoop();
-              }}
-              className="p-2 rounded-xl border border-slate-800 bg-brew-900 text-emerald-400 active:scale-95 transition relative"
-              title="Co-op"
-            >
-              <span className={`w-2 h-2 rounded-full ${isConnected ? 'bg-emerald-400' : 'bg-amber-400'} absolute top-1 right-1`} />
-              <Users className="w-4 h-4" />
-            </button>
-          )}
-
-          {/* Quick Inköpslista Icon */}
-          <button
-            onClick={() => {
-              playClick();
-              onOpenShoppingList();
-            }}
-            className="p-2 rounded-xl border border-slate-800 bg-brew-900 text-amber-400 active:scale-95 transition"
-            title="Inköpslista"
-          >
-            <ShoppingBag className="w-4 h-4" />
-          </button>
-
-          {/* Quick Bryggdag Icon */}
-          <button
-            onClick={() => {
-              playClick();
-              onOpenBrewDay();
-            }}
-            className="p-2 rounded-xl border border-slate-800 bg-brew-900 text-orange-400 active:scale-95 transition"
-            title="Bryggdag"
-          >
-            <Flame className="w-4 h-4" />
-          </button>
-
-          {/* Mobile Hamburger Menu Toggle */}
-          <button
-            onClick={() => {
-              playClick();
-              setMobileMenuOpen(!mobileMenuOpen);
-            }}
-            className="p-2 rounded-xl border border-slate-800 bg-brew-900 text-slate-300 active:scale-95 transition"
-            title="Öppna meny"
-          >
-            {mobileMenuOpen ? <X className="w-4 h-4" /> : <Menu className="w-4 h-4" />}
+            {lang === 'sv' ? 'SV' : 'EN'}
           </button>
         </div>
       </div>
-
-      {/* Mobile Drawer Dropdown (when hamburger is opened) */}
-      {mobileMenuOpen && (
-        <div className="sm:hidden border-t border-slate-800/80 bg-brew-950/95 p-4 space-y-3 animate-in fade-in slide-in-from-top-2 duration-200">
-          <div className="grid grid-cols-2 gap-2">
-            {onOpenRecipePicker && (
-              <button
-                onClick={() => {
-                  playClick();
-                  setMobileMenuOpen(false);
-                  onOpenRecipePicker();
-                }}
-                className="col-span-2 p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-left flex items-center justify-between text-xs font-bold text-amber-300 active:bg-amber-500/20"
-              >
-                <div className="flex items-center gap-2.5">
-                  <Lightbulb className="w-4 h-4 text-amber-400" />
-                  <span>{lang === 'sv' ? 'Välj Ölstil & Receptidéer' : 'Choose Beer Style & Recipes'}</span>
-                </div>
-                <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 font-bold">
-                  {lang === 'sv' ? 'Bläddra' : 'Browse'}
-                </span>
-              </button>
-            )}
-            {onOpenCoop && (
-              <button
-                onClick={() => {
-                  playClick();
-                  setMobileMenuOpen(false);
-                  onOpenCoop();
-                }}
-                className="col-span-2 p-3 rounded-xl bg-brew-900 border border-emerald-500/30 text-left flex items-center justify-between text-xs font-semibold text-emerald-300 active:bg-brew-850"
-              >
-                <div className="flex items-center gap-2.5">
-                  <span className={`w-2.5 h-2.5 rounded-full ${isConnected ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'}`} />
-                  <span>{lang === 'sv' ? `Co-op Rum: ${currentRoom}` : `Co-op Room: ${currentRoom}`}</span>
-                </div>
-                <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 font-mono font-bold">
-                  {peersCount > 1 ? `${peersCount} online` : '1'}
-                </span>
-              </button>
-            )}
-            <button
-              onClick={() => {
-                playClick();
-                setMobileMenuOpen(false);
-                onOpenShoppingList();
-              }}
-              className="p-3 rounded-xl bg-brew-900 border border-slate-800 text-left flex items-center gap-2.5 text-xs font-semibold text-slate-200 active:bg-brew-850"
-            >
-              <ShoppingBag className="w-4 h-4 text-amber-400" />
-              <span>{t.shoppingList}</span>
-            </button>
-
-            <button
-              onClick={() => {
-                playClick();
-                setMobileMenuOpen(false);
-                onOpenBrewDay();
-              }}
-              className="p-3 rounded-xl bg-brew-900 border border-slate-800 text-left flex items-center gap-2.5 text-xs font-semibold text-slate-200 active:bg-brew-850"
-            >
-              <Flame className="w-4 h-4 text-orange-400" />
-              <span>{t.brewDay}</span>
-            </button>
-          </div>
-
-          <div className="flex items-center justify-between pt-2 border-t border-slate-800/80">
-            <button
-              onClick={() => {
-                playClick();
-                setMobileMenuOpen(false);
-                onExport();
-              }}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-900 border border-slate-800 text-xs font-semibold text-slate-300 active:bg-slate-850"
-            >
-              <Share2 className="w-3.5 h-3.5" />
-              <span>{t.exportRecipe}</span>
-            </button>
-
-            <button
-              onClick={() => {
-                playClick();
-                onLanguageChange(lang === 'sv' ? 'en' : 'sv');
-              }}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-900 border border-slate-800 text-xs font-bold text-amber-300 active:bg-slate-850"
-            >
-              <span>{lang === 'sv' ? '🇸🇪 Svenska' : '🇬🇧 English'}</span>
-            </button>
-          </div>
-        </div>
-      )}
     </header>
   );
 };
