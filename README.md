@@ -1,5 +1,7 @@
 # Bryggkompis 🍺
 
+[![Bryggkompis Uptime](https://vakt.apps.harkco.se/badge/brygg.svg?metric=uptime)](https://vakt.apps.harkco.se)
+
 > **Receptplanerare & Ölkompaniet Kalkylator** för hembryggare som vill planera, beräkna och brygga öl tillsammans.
 
 Byggt för Viktor och hans bror-i-lag med ingredienser härledda direkt från [Ölkompaniet.se](https://www.olkompaniet.se/).
